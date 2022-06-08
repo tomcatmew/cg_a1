@@ -10,8 +10,8 @@ var targetSphereGeometry = new THREE.SphereGeometry(60, 32, 16);
 var sphereGeometry = new THREE.SphereGeometry(35, 32, 16);
 var boxGeometry = new THREE.BoxBufferGeometry(10, 10, 10);
 var white = new THREE.MeshLambertMaterial({ color: 0x888888 });
-var colorIndex = [0x888888, 0x888888, 0x888888, 0x888888, 0x888888, 0x888888]
-var settings = { messageOne: "No limit", messageTwo: "No limit", messageThree: "No limit", messageFour: "No limit", messageFive: "No limit" };
+var colorIndex = [0x888888, 0x3e75b3, 0x658b42, 0x658b42, 0x888888, 0x888888]
+var settings = { messageOne: "Y axis (-180, +180)", messageTwo: "X axis (-90, +90)", messageThree: "X axis (-90, +90)", messageFour: "X axis (-180, +180)", messageFive: "X axis (-180, +180)" };
 init();
 animate();
 function init() {
@@ -40,9 +40,9 @@ function init() {
   const gui = new dat.GUI();
   gui.domElement.id = "gui";
   const cubeFolder = gui.addFolder("Joints Hinge and Limits");
-  cubeFolder.add(settings, "messageOne").name("Joint 1 (grey)");
-  cubeFolder.add(settings, "messageTwo").name("Joint 2 (grey)");
-  cubeFolder.add(settings, "messageThree").name("Joint 3 (grey)");
+  cubeFolder.add(settings, "messageOne").name("Joint 1 (blue)");
+  cubeFolder.add(settings, "messageTwo").name("Joint 2 (green)");
+  cubeFolder.add(settings, "messageThree").name("Joint 3 (green)");
   cubeFolder.add(settings, "messageFour").name("Joint 4 (grey)");
   cubeFolder.add(settings, "messageFive").name("Joint 5 (grey)");
   cubeFolder.open();
@@ -69,11 +69,11 @@ function init() {
   window.addEventListener('resize', onWindowResize, false);
 
   //Initialize the Joints
-  var base = addJoint(scene, [0, 0, 0], [0, 0, 0], [-180, 180], [0.5, 2, 0.5], [0, 10, 0]);
-  var firstJoint = addJoint(base, [0, 20, 0], [0, 0, 0], [-90, 90], [0.5, 2, 0.5], [0, 10, 0]);
-  var secondJoint = addJoint(firstJoint, [0, 20, 0], [0, 0, 0], [-90, 90], [0.5, 2, 0.5], [0, 10, 0]);
-  var thirdJoint = addJoint(secondJoint, [0, 20, 0], [0, 0, 0], [-180, 180], [0.5, 2, 0.5], [0, 10, 0]);
-  var fourthJoint = addJoint(thirdJoint, [0, 20, 0], [0, 0, 0], [-180, 180], [0.5, 2, 0.5], [0, 10, 0]);
+  var base = addJoint(scene, [0, 0, 0], [0, 1, 0], [-180, 180], [0.5, 2, 0.5], [0, 10, 0]);
+  var firstJoint = addJoint(base, [0, 20, 0], [1, 0, 0], [-90, 90], [0.5, 2, 0.5], [0, 10, 0]);
+  var secondJoint = addJoint(firstJoint, [0, 20, 0], [1, 0, 0], [-90, 90], [0.5, 2, 0.5], [0, 10, 0]);
+  var thirdJoint = addJoint(secondJoint, [0, 20, 0], [1, 0, 0], [-180, 180], [0.5, 2, 0.5], [0, 10, 0]);
+  var fourthJoint = addJoint(thirdJoint, [0, 20, 0], [1, 0, 0], [-180, 180], [0.5, 2, 0.5], [0, 10, 0]);
   endEffector = new THREE.Group();
   var endSpere = new THREE.Mesh(sphereGeometry, new THREE.MeshLambertMaterial({ color: 0x43ae06 }));
   endEffector.add(endSpere);

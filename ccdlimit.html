@@ -9,7 +9,7 @@
     <script src="https://cdn.rawgit.com/mrdoob/three.js/a1fb0b5b/examples/js/controls/DragControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/lil-gui@0.16"></script>
     <script src="https://cdn.jsdelivr.net/npm/dat.gui@0.7.9/build/dat.gui.min.js"></script>
-    <link rel="stylesheet" href="style.css"></script>
+    <link rel="stylesheet" href="style.css" />
     <link
       rel="stylesheet"
       href="https://use.fontawesome.com/releases/v5.8.1/css/all.css"
@@ -25,9 +25,7 @@
             </a>
           </div>
         </div>
-        <div id="placeui"></div>
-        <div class="container" id="maincanvas">
-        </div>
+        <div class="container" id="maincanvas"></div>
       </div>
       <div class="sidebar">
         <div class="profile">
@@ -50,13 +48,13 @@
             </a>
           </li>
           <li>
-            <a href="ccdlimit.html">
+            <a href="ccdlimit.html" class="active">
               <span class="icon"><i class="fas fa-bezier-curve"></i></span>
               <span class="item">CCD IK (limits)</span>
             </a>
           </li>
           <li>
-            <a href="jacobian.html" class="active">
+            <a href="jacobian.html">
               <span class="icon"><i class="fas fa-vector-square"></i></span>
               <span class="item">Jacobian IK</span>
             </a>
@@ -67,7 +65,6 @@
               <span class="item">FABRIK</span>
             </a>
           </li>
-
           <!-- <li>
             <a href="#">
               <span class="icon"><i class="fas fa-bezier-curve"></i></span>
@@ -96,6 +93,6 @@
 
     </div>
 
-    <script src="jacobian.js" defer></script>
+    <script src="ccdlimit.js" defer></script>
   </body>
 </html>

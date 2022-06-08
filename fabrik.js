@@ -11,8 +11,8 @@ var targetSphereGeometry = new THREE.SphereGeometry(60, 32, 16);
 var sphereGeometry = new THREE.SphereGeometry(35, 32, 16);
 var boxGeometry = new THREE.BoxBufferGeometry(10, 10, 10);
 var white = new THREE.MeshLambertMaterial({ color: 0x888888 });
-var colorIndex = [0x888888, 0x3e75b3, 0x658b42, 0x658b42, 0x888888, 0x888888]
-var settings = { messageOne: "Y axis (-180, +180)", messageTwo: "X axis (-90, +90)", messageThree: "X axis (-90, +90)", messageFour: "No limit", messageFive: "No limit" };
+var colorIndex = [0x888888, 0x3e75b3, 0x3e75b3, 0x3e75b3, 0x3e75b3, 0x3e75b3]
+var settings = { messageOne: "No limit", messageTwo: "No limit", messageThree: "No limit", messageFour: "No limit", messageFive: "No limit" };
 init();
 animate();
 function init() {
@@ -41,14 +41,17 @@ function init() {
   light.shadow.camera.right = 120;
   scene.add(light);
 
+  // const axesHelper = new THREE.AxesHelper(150);
+  // scene.add(axesHelper);
+
   const gui = new dat.GUI();
   gui.domElement.id = "gui";
   const cubeFolder = gui.addFolder("Joints Hinge and Limits");
   cubeFolder.add(settings, "messageOne").name("Joint 1 (blue)");
-  cubeFolder.add(settings, "messageTwo").name("Joint 2 (green)");
-  cubeFolder.add(settings, "messageThree").name("Joint 3 (green)");
-  cubeFolder.add(settings, "messageFour").name("Joint 4 (grey)");
-  cubeFolder.add(settings, "messageFive").name("Joint 5 (grey)");
+  cubeFolder.add(settings, "messageTwo").name("Joint 2 (blue)");
+  cubeFolder.add(settings, "messageThree").name("Joint 3 (blue)");
+  cubeFolder.add(settings, "messageFour").name("Joint 4 (blue)");
+  cubeFolder.add(settings, "messageFive").name("Joint 5 (blue)");
   cubeFolder.open();
 
   //scene.add(new THREE.CameraHelper(light.shadow.camera));
@@ -73,12 +76,12 @@ function init() {
   window.addEventListener('resize', onWindowResize, false);
 
   //Initialize the Joints
-  var base = addJoint(scene, [0, 0, 0], [0, 1, 0], [-180, 180], [0.5, 2, 0.5], [0, 10, 0]);
-  var firstJoint = addJoint(base, [0, 20, 0], [1, 0, 0], [-90, 90], [0.5, 2, 0.5], [0, 10, 0]);
-  var secondJoint = addJoint(firstJoint, [0, 20, 0], [1, 0, 0], [-90, 90], [0.5, 2, 0.5], [0, 10, 0]);
+  var base = addJoint(scene, [0, 0, 0], [0, 0, 0], [-180, 180], [0.5, 2, 0.5], [0, 10, 0]);
+  var firstJoint = addJoint(base, [0, 20, 0], [0, 0, 0], [-180, 180], [0.5, 2, 0.5], [0, 10, 0]);
+  var secondJoint = addJoint(firstJoint, [0, 20, 0], [0, 0, 0], [-180, 180], [0.5, 2, 0.5], [0, 10, 0]);
   var thirdJoint = addJoint(secondJoint, [0, 20, 0], [0, 0, 0], [-180, 180], [0.5, 2, 0.5], [0, 10, 0]);
   var fourthJoint = addJoint(thirdJoint, [0, 20, 0], [0, 0, 0], [-180, 180], [0.5, 2, 0.5], [0, 10, 0]);
-  IKJointsOffset = [20, 20, 20, 20, 20];
+  IKJointsOffset = [20, 20, 20, 20, 20, 20];
   endEffector = new THREE.Group();
   var endSpere = new THREE.Mesh(sphereGeometry, new THREE.MeshLambertMaterial({ color: 0x43ae06 }));
   endEffector.add(endSpere);
@@ -143,13 +146,15 @@ function onWindowResize() {
 }
 
 function backward(IKglobalPositions, target) {
-  IKglobalPositions[IKglobalPositions.length - 1] = new THREE.Vector3(target.x, target.y, target.z);
-  for (var i = IKJointsList.length - 2; i >= 0; i--) {
+  IKglobalPositions[IKglobalPositions.length - 1].x = target.x;
+  IKglobalPositions[IKglobalPositions.length - 1].y = target.y;
+  IKglobalPositions[IKglobalPositions.length - 1].z = target.z;
+  for (var i = IKglobalPositions.length - 2; i >= 0; i--) {
     let dirBack = new THREE.Vector3();
-    dirBack.subVectors(IKglobalPositions[i].clone(), IKglobalPositions[i + 1].clone());
+    dirBack.subVectors(IKglobalPositions[i], IKglobalPositions[i + 1]);
     dirBack.normalize();
     let newPos = new THREE.Vector3();
-    newPos.addVectors(IKglobalPositions[i + 1].clone(), dirBack.multiplyScalar(IKJointsOffset[i]));
+    newPos.addVectors(IKglobalPositions[i + 1], dirBack.multiplyScalar(IKJointsOffset[i]));
     IKglobalPositions[i].x = newPos.x;
     IKglobalPositions[i].y = newPos.y;
     IKglobalPositions[i].z = newPos.z;
@@ -157,13 +162,16 @@ function backward(IKglobalPositions, target) {
 }
 
 function forward(IKglobalPositions, origin) {
-  IKglobalPositions[0] = new THREE.Vector3(origin.x, origin.y, origin.z);
-  for (var i = 1; i <= IKJointsList.length - 1; i++) {
+  IKglobalPositions[0].x = origin.x;
+  IKglobalPositions[0].y = origin.y;
+  IKglobalPositions[0].z = origin.z;
+  for (var i = 1; i <= IKglobalPositions.length - 1; i++) {
     let dirForard = new THREE.Vector3();
-    dirForard.subVectors(IKglobalPositions[i].clone(), IKglobalPositions[i - 1].clone());
+    dirForard.subVectors(IKglobalPositions[i], IKglobalPositions[i - 1]);
     dirForard.normalize();
     let newPos = new THREE.Vector3();
-    newPos.addVectors(IKglobalPositions[i - 1].clone(), dirForard.multiplyScalar(IKJointsOffset[i]));
+    newPos.addVectors(IKglobalPositions[i - 1], dirForard.multiplyScalar(IKJointsOffset[i]));
+    // console.log(newPos);
     IKglobalPositions[i].x = newPos.x;
     IKglobalPositions[i].y = newPos.y;
     IKglobalPositions[i].z = newPos.z;
@@ -180,71 +188,38 @@ function solveFABRIK(targetPosition) {
     IKJointsList[i].getWorldPosition(jointWorldPos);
     IKpositions.push(jointWorldPos);
   }
-  endEffectorGlobalPos = new THREE.Vector3();
+  let endEffectorGlobalPos = new THREE.Vector3();
   endEffector.getWorldPosition(endEffectorGlobalPos);
   IKpositions.push(endEffectorGlobalPos)
 
+  for (var i = 0; i <= numIterations; i++) {
+    backward(IKpositions, targetPosition);
+    forward(IKpositions, origin);
+  }
+  // Debuggin Helper
   // for (var i = 0; i <= IKpositions.length - 1; i++) {
-  //   var tempt = new THREE.Mesh(targetSphereGeometry, new THREE.MeshLambertMaterial({ color: 0xf0a219 }));
+  //   var tempt = new THREE.Mesh(targetSphereGeometry, new THREE.MeshLambertMaterial({ color: 0xbfaa8f }));
   //   tempt.position.set(IKpositions[i].x, IKpositions[i].y, IKpositions[i].z);
-  //   tempt.scale.set(0.075, 0.075, 0.075);
+  //   tempt.scale.set(0.035, 0.035, 0.035);
   //   scene.add(tempt);
   // }
-
-  backward(IKpositions, targetPosition);
-  forward(IKpositions, origin);
-
-
-  // for (var i = 0; i <= IKpositions.length - 1; i++) {
-  //   var tempt = new THREE.Mesh(targetSphereGeometry, new THREE.MeshLambertMaterial({ color: 0xf0a219 }));
-  //   tempt.position.set(IKpositions[i].x, IKpositions[i].y, IKpositions[i].z);
-  //   tempt.scale.set(0.075, 0.075, 0.075);
-  //   scene.add(tempt);
-  // }
-
-
 
   // Forward Kinematic
-  // for (var i = 0; i <= IKJointsList.length - 1; i++) {
-  //   var childGlobal = new THREE.Vector3();
-  //   if (i == IKJointsList.length - 1) {
-  //     endEffector.getWorldPosition(childGlobal);
-  //   }
-  //   else {
-  //     IKJointsList[i + 1].getWorldPosition(childGlobal);
-  //   }
-  //   var jointDirection = IKJointsList[i].worldToLocal(childGlobal.clone()).normalize();
-  //   var targetDirection = IKJointsList[i].worldToLocal(IKpositions[i].clone()).normalize();
-  //   var angelBetweenVectors = new THREE.Quaternion(0, 0, 0, 1).setFromUnitVectors(jointDirection, targetDirection);
-  //   IKJointsList[i].quaternion.multiply(angelBetweenVectors);
-  // }
-
-}
-//CCDIK Solver
-function solveCCDIK(targetPosition) {
-  var jointPosition = new THREE.Vector3();
-  for (var i = IKJointsList.length - 1; i >= 0; i--) {
-    IKJointsList[i].updateMatrixWorld();
-    endEffector.getWorldPosition(jointPosition);
-
-    // find the direction 
-    var jointDirection = IKJointsList[i].worldToLocal(jointPosition.clone()).normalize();
-    var targetDirection = IKJointsList[i].worldToLocal(targetPosition.clone()).normalize();
-    var angelBetweenVectors = new THREE.Quaternion(0, 0, 0, 1).setFromUnitVectors(jointDirection, targetDirection);
+  for (var i = 0; i <= IKJointsList.length - 1; i++) {
+    var childGlobal = new THREE.Vector3();
+    if (i == IKJointsList.length - 1) {
+      endEffector.getWorldPosition(childGlobal);
+    }
+    else {
+      IKJointsList[i + 1].getWorldPosition(childGlobal);
+    }
+    var jointDirection = IKJointsList[i].worldToLocal(childGlobal).normalize();
+    var targetDirection = IKJointsList[i].worldToLocal(IKpositions[i + 1]).normalize();
+    var angelBetweenVectors = new THREE.Quaternion()
+    angelBetweenVectors.setFromUnitVectors(jointDirection, targetDirection);
     IKJointsList[i].quaternion.multiply(angelBetweenVectors);
-
-    // adding hinges 
-    var invRot = IKJointsList[i].quaternion.clone().inverse();
-    var parentAxis = IKJointsList[i].axis.clone().applyQuaternion(invRot);
-    angelBetweenVectors.setFromUnitVectors(IKJointsList[i].axis, parentAxis);
-    IKJointsList[i].quaternion.multiply(angelBetweenVectors);
-
-    // adding constraints
-    var clampedRot = IKJointsList[i].rotation.toVector3().clampScalar(IKJointsList[i].minLimit, IKJointsList[i].maxLimit);
-    IKJointsList[i].rotation.setFromVector3(clampedRot);
-
-    IKJointsList[i].updateMatrixWorld();
   }
+
 }
 
 function animate() {

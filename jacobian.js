@@ -1,412 +1,160 @@
 // Copyright Yifei Chen - University of Tokyo Creative Informatics
-// For Computer Graphics homework assignment 1
+// For Computer Graphics homework assignment A1
 
-let container, stats, controls;
-let camera, scene, renderer, light;
-let totalSlice, t, step;
-let line, line2, line3;
-let draggableObjects = [];
-let control1, control2, control3, control4;
-let current_sample;
-let samplePoint = [];
-
-let dis_table = [];
-let t_table = [];
-
-const material_line = new THREE.LineBasicMaterial({ color: 0x000000 });
-const params = {
-  Samples: 30,
-  tension: 0.5,
-};
-
+var container, stats, controls;
+var camera, scene, renderer, light;
+var draggableObjects = [];
+var endEffector = null;
+var IKJointsList = [];
+var targetSphereGeometry = new THREE.SphereGeometry(60, 32, 16);
+var sphereGeometry = new THREE.SphereGeometry(35, 32, 16);
+var boxGeometry = new THREE.BoxBufferGeometry(10, 10, 10);
+var white = new THREE.MeshLambertMaterial({ color: 0x888888 });
+var colorIndex = [0x888888, 0x3e75b3, 0x658b42, 0x658b42, 0x888888, 0x888888]
+var settings = { messageOne: "Y axis (-180, +180)", messageTwo: "X axis (-90, +90)", messageThree: "X axis (-90, +90)", messageFour: "No limit", messageFive: "No limit" };
 init();
 animate();
-
-// function remap(x, a, b, c, d) {
-//   if (x < a || x > b) {
-//     return false;
-//   }
-//   return ((x - a) / (b - a)) * (d - c) + c;
-// }
-
-function Remap(value, from1, to1, from2, to2) {
-  return ((value - from1) / (to1 - from1)) * (to2 - from2) + from2;
-}
-
-function distance(p0x, p0y, p1x, p1y) {
-  var a = p1x - p0x;
-  var b = p1y - p0y;
-  return Math.sqrt(a * a + b * b);
-}
-
-// ===================== Implementation of Adaptive bezier curve - Equal length distributed ============================
-// I used Look-Up-table to find the new t of equal distance points. 
-function adaptive_curve() {
-  let copy_arr = [];
-  for (let i = 0; i < t_table.length; i++) {
-    copy_arr.push(t_table[i]);
-  }
-
-  let sum_length = dis_table[dis_table.length - 1];
-  let n = dis_table.length;
-  let d = sum_length / (dis_table.length - 1);
-  for (let i = 1; i < copy_arr.length - 1; i++) {
-    dis = i * d;
-    for (let j = 0; j < dis_table.length - 1; j++) {
-      if (dis > dis_table[j] && dis < dis_table[j + 1]) {
-        t_table[i] = Remap(
-          dis,
-          dis_table[j],
-          dis_table[j + 1],
-          copy_arr[j],
-          copy_arr[j + 1]
-        );
-      }
-    }
-  }
-// ------------------------ Implementation ----------------------------
-  p0x = control1.position.x;
-  p1x = control2.position.x;
-  p2x = control3.position.x;
-  p3x = control4.position.x;
-  p0y = control1.position.y;
-  p1y = control2.position.y;
-  p2y = control3.position.y;
-  p3y = control4.position.y;
-
-  const positions = line.geometry.attributes.position.array;
-  let x, y, z, index;
-  x = y = z = index = 0;
-  t_index = 0;
-  // console.log(t_table);
-  for (let i = 0; i <= current_sample * 3; i += 3) {
-    update_x = bezier_curve_compute(t_table[t_index], p0x, p1x, p2x, p3x);
-    update_y = bezier_curve_compute(t_table[t_index], p0y, p1y, p2y, p3y);
-    if (i == current_sample * 3) {
-      positions[i] = p3x;
-      positions[i + 1] = p3y;
-      positions[i + 2] = 0;
-    } else {
-      positions[i] = update_x;
-      positions[i + 1] = update_y;
-      positions[i + 2] = 0;
-    }
-    const sample_idx = Math.floor(i / 3);
-    if (i == current_sample * 3) {
-      samplePoint[sample_idx].position.set(p3x, p3y, 0);
-    } else {
-      samplePoint[sample_idx].position.set(update_x, update_y, 0);
-    }
-    t_index++;
-  }
-}
-
-function updatePositions() {
-  if (typeof line != "undefined" && samplePoint.length != 0) {
-    t_table = [];
-    dis_table = [];
-    t = 0;
-    p0x = control1.position.x;
-    p1x = control2.position.x;
-    p2x = control3.position.x;
-    p3x = control4.position.x;
-    p0y = control1.position.y;
-    p1y = control2.position.y;
-    p2y = control3.position.y;
-    p3y = control4.position.y;
-
-    const positions = line.geometry.attributes.position.array;
-    let x, y, z, index;
-    x = y = z = index = 0;
-    let [pre_x, pre_y] = [p0x, p0y];
-    let cumulative_len = 0;
-    for (let i = 0; i <= current_sample * 3; i += 3) {
-      update_x = bezier_curve_compute(t, p0x, p1x, p2x, p3x);
-      update_y = bezier_curve_compute(t, p0y, p1y, p2y, p3y);
-      if (i == current_sample * 3) {
-        positions[i] = p3x;
-        positions[i + 1] = p3y;
-        positions[i + 2] = 0;
-      } else {
-        positions[i] = update_x;
-        positions[i + 1] = update_y;
-        positions[i + 2] = 0;
-      }
-      const sample_idx = Math.floor(i / 3);
-      if (i == current_sample * 3) {
-        samplePoint[sample_idx].position.set(p3x, p3y, 0);
-        t_table.push(1);
-      } else {
-        t_table.push(t);
-        samplePoint[sample_idx].position.set(update_x, update_y, 0);
-      }
-      if (i != 0) {
-        if (i == current_sample * 3) {
-          cumulative_len += distance(pre_x, pre_y, p3x, p3y);
-          dis_table.push(cumulative_len);
-        } else {
-          cumulative_len += distance(pre_x, pre_y, update_x, update_y);
-          dis_table.push(cumulative_len);
-        }
-        // dis_table.push(distance(pre_x, pre_y, update_x, update_y));
-      } else {
-        dis_table.push(cumulative_len);
-      }
-      pre_x = update_x;
-      pre_y = update_y;
-      t += step;
-    }
-  }
-  // console.log(t_table);
-  // console.log(dis_table);
-  adaptive_curve();
-  const positions2 = line2.geometry.attributes.position.array;
-  positions2[0] = p0x;
-  positions2[1] = p0y;
-  positions2[3] = p1x;
-  positions2[4] = p1y;
-
-  const positions3 = line3.geometry.attributes.position.array;
-  positions3[0] = p3x;
-  positions3[1] = p3y;
-  positions3[3] = p2x;
-  positions3[4] = p2y;
-}
-
-function creatControl(color, size) {
-  const geometry = new THREE.CircleGeometry(size, 32);
-  const material = new THREE.MeshBasicMaterial({
-    color: color,
-    side: THREE.DoubleSide,
-  });
-  const plane = new THREE.Mesh(geometry, material);
-  return plane;
-}
-
-function creatSample(color, size) {
-  const geometry = new THREE.CircleGeometry(size, 32);
-  const material = new THREE.MeshBasicMaterial({
-    color: color,
-    side: THREE.DoubleSide,
-  });
-  const plane = new THREE.Mesh(geometry, material);
-  return plane;
-}
-
-function update_samples() {
-  scene.remove(line);
-  for (let i = 0; i <= current_sample; i++) {
-    scene.remove(samplePoint[i]);
-  }
-  samplePoint = [];
-  points = [];
-  p0x = control1.position.x;
-  p1x = control2.position.x;
-  p2x = control3.position.x;
-  p3x = control4.position.x;
-  p0y = control1.position.y;
-  p1y = control2.position.y;
-  p2y = control3.position.y;
-  p3y = control4.position.y;
-  current_sample = params.Samples;
-  step = 1 / current_sample;
-  t = 0;
-  for (let i = 0; i < current_sample; i++) {
-    let x = bezier_curve_compute(t, p0x, p1x, p2x, p3x);
-    let y = bezier_curve_compute(t, p0y, p1y, p2y, p3y);
-    points.push(new THREE.Vector3(x, y, 0));
-    new_sample = creatSample(0x4989bb, 0.5);
-    new_sample.position.x = x;
-    new_sample.position.y = y;
-    samplePoint.push(new_sample);
-    t += step;
-    if (i == current_sample - 1) {
-      let last_x = p3x;
-      let last_y = p3y;
-      points.push(new THREE.Vector3(last_x, last_y, 0));
-      last_sample = creatSample(0x4989bb, 0.5);
-      last_sample.position.x = last_x;
-      last_sample.position.y = last_y;
-      samplePoint.push(last_sample);
-    }
-  }
-
-  const geometry = new THREE.BufferGeometry().setFromPoints(points);
-  line = new THREE.Line(geometry, material_line);
-  scene.add(line);
-  for (let i = 0; i <= current_sample; i++) {
-    scene.add(samplePoint[i]);
-  }
-  updatePositions();
-}
-
-// -------------implementation of cubie bezier curve-------------------
-function bezier_curve_compute(t, p1, p2, p3, p4) {
-  const t1 = 1 - t;
-  const t1_3 = Math.pow(t1, 3);
-  const t1_2 = Math.pow(t1, 2);
-  const t3 = Math.pow(t, 3);
-  const t2 = Math.pow(t, 2);
-  return t1_3 * p1 + 3 * t1_2 * t * p2 + 3 * t1 * t2 * p3 + t3 * p4;
-}
-// ------------------------ Implementation ----------------------------
-
 function init() {
-  current_sample = params.Samples;
-  step = 1 / current_sample;
-  t = 0;
+
   container = document.getElementById("maincanvas");
   document.body.appendChild(container);
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  // renderer.shadowMap.enabled = true;
-  document.body.style.margin = 0;
-  document.body.style.padding = 0;
-  document.body.style.overflow = "hidden";
-  document.body.style.position = "fixed";
-  container.appendChild(renderer.domElement);
+  camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 5000);
+  camera.position.set(170, 100, 150);
+  controls = new THREE.OrbitControls(camera);
+  controls.target.set(0, 45, 0);
+  controls.update();
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xffffff);
+  light = new THREE.HemisphereLight(0xffffff, 0x444444);
+  light.position.set(0, 200, 0);
+  scene.add(light);
+  light = new THREE.DirectionalLight(0xbbbbbb);
+  light.position.set(0, 200, 100);
+  light.castShadow = true;
+  light.shadow.camera.top = 180;
+  light.shadow.camera.bottom = - 100;
+  light.shadow.camera.left = - 120;
+  light.shadow.camera.right = 120;
+  scene.add(light);
 
   const gui = new dat.GUI();
   gui.domElement.id = "gui";
-  const cubeFolder = gui.addFolder("Sampled Line");
-  cubeFolder.add(params, "Samples", 10, 60).step(1).onChange(update_samples);
+  const cubeFolder = gui.addFolder("Joints Hinge and Limits");
+  cubeFolder.add(settings, "messageOne").name("Joint 1 (blue)");
+  cubeFolder.add(settings, "messageTwo").name("Joint 2 (green)");
+  cubeFolder.add(settings, "messageThree").name("Joint 3 (green)");
+  cubeFolder.add(settings, "messageFour").name("Joint 4 (grey)");
+  cubeFolder.add(settings, "messageFive").name("Joint 5 (grey)");
   cubeFolder.open();
 
-  camera = new THREE.PerspectiveCamera(
-    45,
-    window.innerWidth / window.innerHeight,
-    1,
-    500
-  );
-  controls = new THREE.OrbitControls(camera);
-  controls.target.set(0, 45, 0);
-  controls.enablePan = false;
-  controls.enableRotate = false;
-  controls.enableZoom = false;
-  controls.update();
-  camera.position.set(0, 0, 100);
-  camera.lookAt(0, 0, 0);
-  camera.position.set(0, 0, 100);
-  camera.lookAt(0, 0, 0);
+  //scene.add(new THREE.CameraHelper(light.shadow.camera));
+  // ground
+  var mesh = new THREE.Mesh(new THREE.PlaneBufferGeometry(2000, 2000), new THREE.MeshPhongMaterial({ color: 0x999999, depthWrite: false }));
+  mesh.rotation.x = - Math.PI / 2;
+  mesh.receiveShadow = true;
+  scene.add(mesh);
+  var grid = new THREE.GridHelper(2000, 20, 0x000000, 0x000000);
+  grid.material.opacity = 0.2;
+  grid.material.transparent = true;
+  scene.add(grid);
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.shadowMap.enabled = true;
+  document.body.style.margin = 0;
+  document.body.style.padding = 0;
+  document.body.style.overflow = 'hidden';
+  document.body.style.position = 'fixed';
+  container.appendChild(renderer.domElement);
+  window.addEventListener('resize', onWindowResize, false);
 
-  scene = new THREE.Scene();
+  //Initialize the Joints
+  var base = addJoint(scene, [0, 0, 0], [0, 1, 0], [-180, 180], [0.5, 2, 0.5], [0, 10, 0]);
+  var firstJoint = addJoint(base, [0, 20, 0], [1, 0, 0], [-90, 90], [0.5, 2, 0.5], [0, 10, 0]);
+  var secondJoint = addJoint(firstJoint, [0, 20, 0], [1, 0, 0], [-90, 90], [0.5, 2, 0.5], [0, 10, 0]);
+  var thirdJoint = addJoint(secondJoint, [0, 20, 0], [0, 0, 0], [-180, 180], [0.5, 2, 0.5], [0, 10, 0]);
+  var fourthJoint = addJoint(thirdJoint, [0, 20, 0], [0, 0, 0], [-180, 180], [0.5, 2, 0.5], [0, 10, 0]);
+  endEffector = new THREE.Group();
+  var endSpere = new THREE.Mesh(sphereGeometry, new THREE.MeshLambertMaterial({ color: 0x43ae06 }));
+  endEffector.add(endSpere);
+  fourthJoint.add(endEffector);
+  endEffector.position.set(0.0, 20, 0.0);
+  endEffector.scale.set(0.075, 0.075, 0.075);
 
-  //create a blue LineBasicMaterial
-  const material = new THREE.LineBasicMaterial({ color: 0x000000 });
+  // Initialize the target 
+  var target = new THREE.Mesh(targetSphereGeometry, new THREE.MeshLambertMaterial({ color: 0xf7474b }));
+  target.position.set(15, 120, 0);
+  target.scale.set(0.075, 0.075, 0.075);
+  target.transparent = true;
+  target.opacity = 0.5;
+  target.castShadow = true;
+  target.receiveShadow = true;
+  scene.add(target);
+  draggableObjects.push(target);
 
-  control1 = creatControl(0x333333, 1.5);
-  control2 = creatControl(0xf7474b, 1.0);
-  control3 = creatControl(0xf7474b, 1.0);
-  control4 = creatControl(0x333333, 1.5);
-  control1.position.set(-20, -3, 0);
-  control2.position.set(40, -20, 0);
-  control3.position.set(-30, 20, 0);
-  control4.position.set(35, 3, 0);
-
-  const points = [];
-
-  p0x = control1.position.x;
-  p1x = control2.position.x;
-  p2x = control3.position.x;
-  p3x = control4.position.x;
-  p0y = control1.position.y;
-  p1y = control2.position.y;
-  p2y = control3.position.y;
-  p3y = control4.position.y;
-
-  for (let i = 0; i < current_sample; i++) {
-    x = bezier_curve_compute(t, p0x, p1x, p2x, p3x);
-    y = bezier_curve_compute(t, p0y, p1y, p2y, p3y);
-    points.push(new THREE.Vector3(x, y, 0));
-    sample = creatSample(0x4989bb, 0.5);
-    sample.position.x = x;
-    sample.position.y = y;
-    samplePoint.push(sample);
-    t += step;
-    if (i == current_sample - 1) {
-      let last_x = p3x;
-      let last_y = p3y;
-      points.push(new THREE.Vector3(last_x, last_y, 0));
-      let last_sample = creatSample(0x4989bb, 0.5);
-      last_sample.position.x = last_x;
-      last_sample.position.y = last_y;
-      samplePoint.push(last_sample);
-    }
-  }
-
-  const points2 = [];
-  const material2 = new THREE.LineBasicMaterial({
-    color: 0xf7474b,
-    linewidth: 1,
-  });
-  points2.push(new THREE.Vector3(p0x, p0y, -0.1));
-  points2.push(new THREE.Vector3(p1x, p1y, -0.1));
-
-  const points3 = [];
-  const material3 = new THREE.LineBasicMaterial({
-    color: 0xf7474b,
-    linewidth: 1,
-  });
-  points3.push(new THREE.Vector3(p3x, p3y, -0.1));
-  points3.push(new THREE.Vector3(p2x, p2y, -0.1));
-
-  const geometry = new THREE.BufferGeometry().setFromPoints(points);
-  line = new THREE.Line(geometry, material);
-
-  const geometry2 = new THREE.BufferGeometry().setFromPoints(points2);
-  line2 = new THREE.Line(geometry2, material2);
-
-  const geometry3 = new THREE.BufferGeometry().setFromPoints(points3);
-  line3 = new THREE.Line(geometry3, material3);
-
-  const size = 200;
-  const divisions = 30;
-
-  const gridHelper = new THREE.GridHelper(size, divisions);
-  gridHelper.rotateOnAxis(new THREE.Vector3(1, 0, 0), 1.5708);
-  gridHelper.position.z = -1;
-  scene.add(gridHelper);
-  scene.add(line);
-  scene.add(line2);
-  scene.add(line3);
-  scene.add(control1);
-  scene.add(control2);
-  scene.add(control3);
-  scene.add(control4);
-
-  for (let i = 0; i <= current_sample; i++) {
-    scene.add(samplePoint[i]);
-  }
-  draggableObjects.push(control1);
-  draggableObjects.push(control2);
-  draggableObjects.push(control3);
-  draggableObjects.push(control4);
-
-  let dragControls = new THREE.DragControls(
-    draggableObjects,
-    camera,
-    renderer.domElement
-  );
-  dragControls.addEventListener("dragstart", function () {
+  var dragControls = new THREE.DragControls(draggableObjects, camera, renderer.domElement);
+  dragControls.addEventListener('dragstart', function () {
     controls.enabled = false;
   });
-  dragControls.addEventListener("dragend", function () {
+  dragControls.addEventListener('dragend', function () {
     controls.enabled = true;
   });
 }
 
-function animate() {
-  requestAnimationFrame(animate);
-  // update_samples();
-  updatePositions();
-  line.geometry.attributes.position.needsUpdate = true;
-  line2.geometry.attributes.position.needsUpdate = true;
-  line3.geometry.attributes.position.needsUpdate = true;
-  renderer.render(scene, camera);
+function addJoint(parentBone, position, axis, limits, size, graphicsOffset) {
+  var joint = new THREE.Group();
+  parentBone.add(joint);
+  joint.position.set(position[0], position[1], position[2]);
+  joint.axis = new THREE.Vector3(axis[0], axis[1], axis[2]);
+
+  // Convert degree to radian
+
+  joint.minLimit = limits[0] * 0.01745;
+  joint.maxLimit = limits[1] * 0.01745;
+  IKJointsList.push(joint);
+  var box = new THREE.Mesh(boxGeometry, new THREE.MeshLambertMaterial({ color: colorIndex[IKJointsList.length] }));
+  joint.add(box);
+  box.scale.set(size[0], size[1], size[2]);
+  box.position.set(graphicsOffset[0], graphicsOffset[1], graphicsOffset[2]);
+  box.castShadow = true;
+  return joint;
 }
 
-var hamburger = document.querySelector(".hamburger");
-hamburger.addEventListener("click", function () {
-  document.querySelector("body").classList.toggle("active");
-});
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+//CCDIK Solver
+function solveCCDIK(targetPosition) {
+  var jointPosition = new THREE.Vector3();
+  for (var i = IKJointsList.length - 1; i >= 0; i--) {
+    IKJointsList[i].updateMatrixWorld();
+    endEffector.getWorldPosition(jointPosition);
+
+    // find the direction 
+    var jointDirection = IKJointsList[i].worldToLocal(jointPosition.clone()).normalize();
+    var targetDirection = IKJointsList[i].worldToLocal(targetPosition.clone()).normalize();
+    var fromToQuat = new THREE.Quaternion(0, 0, 0, 1).setFromUnitVectors(jointDirection, targetDirection);
+    IKJointsList[i].quaternion.multiply(fromToQuat);
+
+    // adding hinges 
+    var invRot = IKJointsList[i].quaternion.clone().inverse();
+    var parentAxis = IKJointsList[i].axis.clone().applyQuaternion(invRot);
+    fromToQuat.setFromUnitVectors(IKJointsList[i].axis, parentAxis);
+    IKJointsList[i].quaternion.multiply(fromToQuat);
+
+    // adding constraints
+    var clampedRot = IKJointsList[i].rotation.toVector3().clampScalar(IKJointsList[i].minLimit, IKJointsList[i].maxLimit);
+    IKJointsList[i].rotation.setFromVector3(clampedRot);
+
+    IKJointsList[i].updateMatrixWorld();
+  }
+}
+
+function animate() {
+  solveCCDIK(draggableObjects[0].position);
+  requestAnimationFrame(animate);
+  renderer.render(scene, camera);
+}
