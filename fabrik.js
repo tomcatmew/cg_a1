@@ -76,6 +76,7 @@ function init() {
   window.addEventListener('resize', onWindowResize, false);
 
   //Initialize the Joints
+  // ------------------ Current Implementation doesn't support hinge and constraints -------------------------
   var base = addJoint(scene, [0, 0, 0], [0, 0, 0], [-180, 180], [0.5, 2, 0.5], [0, 10, 0]);
   var firstJoint = addJoint(base, [0, 20, 0], [0, 0, 0], [-180, 180], [0.5, 2, 0.5], [0, 10, 0]);
   var secondJoint = addJoint(firstJoint, [0, 20, 0], [0, 0, 0], [-180, 180], [0.5, 2, 0.5], [0, 10, 0]);
@@ -91,12 +92,12 @@ function init() {
 
   // Initialize the target 
   var target = new THREE.Mesh(targetSphereGeometry, new THREE.MeshLambertMaterial({ color: 0xf7474b }));
-  target.position.set(15, 120, 0);
-  target.scale.set(0.075, 0.075, 0.075);
   target.transparent = true;
   target.opacity = 0.5;
   target.castShadow = true;
   target.receiveShadow = true;
+  target.position.set(55, 70, -20);
+  target.scale.set(0.075, 0.075, 0.075);
   scene.add(target);
   draggableObjects.push(target);
 
@@ -107,16 +108,6 @@ function init() {
   dragControls.addEventListener('dragend', function () {
     controls.enabled = true;
   });
-
-  // for (var i = 0; i <= IKJointsList.length - 1; i++) {
-  //   var tempt = new THREE.Mesh(targetSphereGeometry, new THREE.MeshLambertMaterial({ color: 0xf0a219 }));
-  //   // console.log(IKJointsList[i].matrixWorld.elements);
-  //   var temptpos = new THREE.Vector3();
-  //   IKJointsList[i].getWorldPosition(temptpos);
-  //   tempt.position.set(temptpos.x, temptpos.y, temptpos.z);
-  //   tempt.scale.set(0.075, 0.075, 0.075);
-  //   scene.add(tempt);
-  // }
 }
 
 
@@ -145,6 +136,8 @@ function onWindowResize() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
+
+// ----------------------------------------------------------- FABRIK Implementation here -----------------------------------------------------
 function backward(IKglobalPositions, target) {
   IKglobalPositions[IKglobalPositions.length - 1].x = target.x;
   IKglobalPositions[IKglobalPositions.length - 1].y = target.y;
@@ -218,9 +211,11 @@ function solveFABRIK(targetPosition) {
     var angelBetweenVectors = new THREE.Quaternion()
     angelBetweenVectors.setFromUnitVectors(jointDirection, targetDirection);
     IKJointsList[i].quaternion.multiply(angelBetweenVectors);
+    IKJointsList[i].updateMatrixWorld();
   }
-
 }
+// ----------------------------------------------------------- FABRIK Implementation here -----------------------------------------------------
+
 
 function animate() {
   solveFABRIK(draggableObjects[0].position);

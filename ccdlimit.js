@@ -83,12 +83,12 @@ function init() {
 
   // Initialize the target 
   var target = new THREE.Mesh(targetSphereGeometry, new THREE.MeshLambertMaterial({ color: 0xf7474b }));
-  target.position.set(15, 120, 0);
-  target.scale.set(0.075, 0.075, 0.075);
   target.transparent = true;
   target.opacity = 0.5;
   target.castShadow = true;
   target.receiveShadow = true;
+  target.position.set(55, 90, -3);
+  target.scale.set(0.075, 0.075, 0.075);
   scene.add(target);
   draggableObjects.push(target);
 
@@ -126,6 +126,8 @@ function onWindowResize() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
+
+// ----------------------------------------------------------- CCD Implementation here -----------------------------------------------------
 //CCDIK Solver
 function solveCCDIK(targetPosition) {
   var jointPosition = new THREE.Vector3();
@@ -146,12 +148,14 @@ function solveCCDIK(targetPosition) {
     IKJointsList[i].quaternion.multiply(angleBetweenVecs);
 
     // adding constraints
-    var clampedRot = IKJointsList[i].rotation.toVector3().clampScalar(IKJointsList[i].minLimit, IKJointsList[i].maxLimit);
-    IKJointsList[i].rotation.setFromVector3(clampedRot);
+    var clampRotation = IKJointsList[i].rotation.toVector3().clampScalar(IKJointsList[i].minLimit, IKJointsList[i].maxLimit);
+    IKJointsList[i].rotation.setFromVector3(clampRotation);
 
     IKJointsList[i].updateMatrixWorld();
   }
 }
+// ----------------------------------------------------------- CCD Implementation here -----------------------------------------------------
+
 
 function animate() {
   solveCCDIK(draggableObjects[0].position);
