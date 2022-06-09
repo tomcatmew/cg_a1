@@ -30,11 +30,11 @@ function init() {
   scene.add(light);
   light = new THREE.DirectionalLight(0xbbbbbb);
   light.position.set(0, 200, 100);
+  light.shadow.camera.top = 185;
+  light.shadow.camera.bottom = - 110;
+  light.shadow.camera.left = - 110;
+  light.shadow.camera.right = 110;
   light.castShadow = true;
-  light.shadow.camera.top = 180;
-  light.shadow.camera.bottom = - 100;
-  light.shadow.camera.left = - 120;
-  light.shadow.camera.right = 120;
   scene.add(light);
 
   const gui = new dat.GUI();

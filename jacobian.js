@@ -10,8 +10,8 @@ var targetSphereGeometry = new THREE.SphereGeometry(60, 32, 16);
 var sphereGeometry = new THREE.SphereGeometry(35, 32, 16);
 var boxGeometry = new THREE.BoxBufferGeometry(10, 10, 10);
 var white = new THREE.MeshLambertMaterial({ color: 0x888888 });
-var colorIndex = [0x888888, 0x3e75b3, 0x658b42, 0x658b42, 0x888888, 0x888888]
-var settings = { messageOne: "Y axis (-180, +180)", messageTwo: "X axis (-90, +90)", messageThree: "X axis (-90, +90)", messageFour: "No limit", messageFive: "No limit" };
+var colorIndex = [0x888888, 0x658b42, 0x658b42, 0x658b42, 0x888888, 0x888888]
+var settings = { messageOne: "No limit", messageTwo: "No limit", messageThree: "No limit" };
 init();
 animate();
 function init() {
@@ -19,9 +19,10 @@ function init() {
   container = document.getElementById("maincanvas");
   document.body.appendChild(container);
   camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 5000);
-  camera.position.set(170, 100, 150);
+  // camera = new THREE.OrthographicCamera(500 / - 2, 500 / 2, 1200 / 2, 1200 / - 2, 1, 5000);
+  camera.position.set(0, 0, 300);
   controls = new THREE.OrbitControls(camera);
-  controls.target.set(0, 45, 0);
+  controls.target.set(0, 0, 0);
   controls.update();
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0xffffff);
@@ -30,21 +31,22 @@ function init() {
   scene.add(light);
   light = new THREE.DirectionalLight(0xbbbbbb);
   light.position.set(0, 200, 100);
+  light.shadow.camera.top = 185;
+  light.shadow.camera.bottom = - 110;
+  light.shadow.camera.left = - 110;
+  light.shadow.camera.right = 110;
   light.castShadow = true;
-  light.shadow.camera.top = 180;
-  light.shadow.camera.bottom = - 100;
-  light.shadow.camera.left = - 120;
-  light.shadow.camera.right = 120;
   scene.add(light);
+
+  const axesHelper = new THREE.AxesHelper(100);
+  scene.add(axesHelper);
 
   const gui = new dat.GUI();
   gui.domElement.id = "gui";
   const cubeFolder = gui.addFolder("Joints Hinge and Limits");
-  cubeFolder.add(settings, "messageOne").name("Joint 1 (blue)");
+  cubeFolder.add(settings, "messageOne").name("Joint 1 (green)");
   cubeFolder.add(settings, "messageTwo").name("Joint 2 (green)");
   cubeFolder.add(settings, "messageThree").name("Joint 3 (green)");
-  cubeFolder.add(settings, "messageFour").name("Joint 4 (grey)");
-  cubeFolder.add(settings, "messageFive").name("Joint 5 (grey)");
   cubeFolder.open();
 
   //scene.add(new THREE.CameraHelper(light.shadow.camera));
@@ -72,29 +74,28 @@ function init() {
   var base = addJoint(scene, [0, 0, 0], [0, 1, 0], [-180, 180], [0.5, 2, 0.5], [0, 10, 0]);
   var firstJoint = addJoint(base, [0, 20, 0], [1, 0, 0], [-90, 90], [0.5, 2, 0.5], [0, 10, 0]);
   var secondJoint = addJoint(firstJoint, [0, 20, 0], [1, 0, 0], [-90, 90], [0.5, 2, 0.5], [0, 10, 0]);
-  var thirdJoint = addJoint(secondJoint, [0, 20, 0], [0, 0, 0], [-180, 180], [0.5, 2, 0.5], [0, 10, 0]);
-  var fourthJoint = addJoint(thirdJoint, [0, 20, 0], [0, 0, 0], [-180, 180], [0.5, 2, 0.5], [0, 10, 0]);
   endEffector = new THREE.Group();
   var endSpere = new THREE.Mesh(sphereGeometry, new THREE.MeshLambertMaterial({ color: 0x43ae06 }));
   endEffector.add(endSpere);
-  fourthJoint.add(endEffector);
+  secondJoint.add(endEffector);
   endEffector.position.set(0.0, 20, 0.0);
   endEffector.scale.set(0.075, 0.075, 0.075);
 
   // Initialize the target 
   var target = new THREE.Mesh(targetSphereGeometry, new THREE.MeshLambertMaterial({ color: 0xf7474b }));
-  target.position.set(15, 120, 0);
+  target.position.set(65, 50, 0);
   target.scale.set(0.075, 0.075, 0.075);
-  target.transparent = true;
-  target.opacity = 0.5;
-  target.castShadow = true;
-  target.receiveShadow = true;
+  // target.castShadow = true;
+  // target.receiveShadow = true;
   scene.add(target);
   draggableObjects.push(target);
 
   var dragControls = new THREE.DragControls(draggableObjects, camera, renderer.domElement);
   dragControls.addEventListener('dragstart', function () {
     controls.enabled = false;
+  });
+  dragControls.addEventListener('drag', function (event) {
+    event.object.position.z = 0;
   });
   dragControls.addEventListener('dragend', function () {
     controls.enabled = true;
@@ -112,7 +113,7 @@ function addJoint(parentBone, position, axis, limits, size, graphicsOffset) {
   joint.minLimit = limits[0] * 0.01745;
   joint.maxLimit = limits[1] * 0.01745;
   IKJointsList.push(joint);
-  var box = new THREE.Mesh(boxGeometry, new THREE.MeshLambertMaterial({ color: colorIndex[IKJointsList.length] }));
+  var box = new THREE.Mesh(boxGeometry, new THREE.MeshPhongMaterial({ color: colorIndex[IKJointsList.length], opacity: 0.6, transparent: true, }));
   joint.add(box);
   box.scale.set(size[0], size[1], size[2]);
   box.position.set(graphicsOffset[0], graphicsOffset[1], graphicsOffset[2]);
@@ -126,35 +127,83 @@ function onWindowResize() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-//CCDIK Solver
-function solveCCDIK(targetPosition) {
-  var jointPosition = new THREE.Vector3();
-  for (var i = IKJointsList.length - 1; i >= 0; i--) {
-    IKJointsList[i].updateMatrixWorld();
-    endEffector.getWorldPosition(jointPosition);
+//---------------------------------------------------------Jacobian IK implementation here ---------------------------------
+//Jacobian IK Solver
+function solveJacobian(targetPosition) {
+  // @endEffector -> end effector group
+  // @IKJointsList -> joints group
+  // set a small iteration so we can clear see the change
+  const iteration = 2;
 
-    // find the direction 
-    var jointDirection = IKJointsList[i].worldToLocal(jointPosition.clone()).normalize();
-    var targetDirection = IKJointsList[i].worldToLocal(targetPosition.clone()).normalize();
-    var fromToQuat = new THREE.Quaternion(0, 0, 0, 1).setFromUnitVectors(jointDirection, targetDirection);
-    IKJointsList[i].quaternion.multiply(fromToQuat);
+  for (var i = 0; i < iteration; i++) {
+    var beta = 0.001;
+    var endEffectorGlobalPos = new THREE.Vector3();
+    endEffectorGlobalPos = endEffector.getWorldPosition(endEffectorGlobalPos);
 
-    // adding hinges 
-    var invRot = IKJointsList[i].quaternion.clone().inverse();
-    var parentAxis = IKJointsList[i].axis.clone().applyQuaternion(invRot);
-    fromToQuat.setFromUnitVectors(IKJointsList[i].axis, parentAxis);
-    IKJointsList[i].quaternion.multiply(fromToQuat);
+    var targetGlobalPos = targetPosition.clone();
 
-    // adding constraints
-    var clampedRot = IKJointsList[i].rotation.toVector3().clampScalar(IKJointsList[i].minLimit, IKJointsList[i].maxLimit);
-    IKJointsList[i].rotation.setFromVector3(clampedRot);
+    var distanceMove = new THREE.Vector3();
+    distanceMove.subVectors(targetGlobalPos, endEffectorGlobalPos);
+    var deltaDistance = distanceMove.multiplyScalar(beta);
 
-    IKJointsList[i].updateMatrixWorld();
+    // Current this is 2D example, so we only rotate around Z axis 
+    var axis = new THREE.Vector3(0, 0, 1);
+
+    // positions of bone0,1,2
+    var p0 = new THREE.Vector3();
+    var p1 = new THREE.Vector3();
+    var p2 = new THREE.Vector3();
+    IKJointsList[0].getWorldPosition(p0);
+    IKJointsList[1].getWorldPosition(p1);
+    IKJointsList[2].getWorldPosition(p2);
+
+    //vector between end effector to bone 0,1,2
+    var v0 = new THREE.Vector3();
+    var v1 = new THREE.Vector3();
+    var v2 = new THREE.Vector3();
+    v0.subVectors(endEffectorGlobalPos, p0);
+    v1.subVectors(endEffectorGlobalPos, p1);
+    v2.subVectors(endEffectorGlobalPos, p2);
+
+    // construct the Jacobian matrix rows 
+    var j0 = new THREE.Vector3();
+    var j1 = new THREE.Vector3();
+    var j2 = new THREE.Vector3();
+    j0.crossVectors(axis, v0);
+    j1.crossVectors(axis, v1);
+    j2.crossVectors(axis, v2);
+
+    var jacoM = new THREE.Matrix3();
+
+    jacoM.set(j0.x, j1.x, j2.x,
+      j0.y, j1.y, j2.y,
+      j0.z, j1.z, j2.z);
+
+    jacoM.transpose();
+    var thetaAngle = deltaDistance.applyMatrix3(jacoM);
+    thetaAngle = thetaAngle.multiplyScalar(0.1);
+
+    const q0 = new THREE.Quaternion();
+    const q1 = new THREE.Quaternion();
+    const q2 = new THREE.Quaternion();
+    q0.setFromAxisAngle(axis, thetaAngle.x);
+    q1.setFromAxisAngle(axis, thetaAngle.y);
+    q2.setFromAxisAngle(axis, thetaAngle.z);
+
+    qList = [q0, q1, q2];
+
+    for (var i = 0; i <= IKJointsList.length - 1; i++) {
+      IKJointsList[i].updateMatrixWorld();
+      IKJointsList[i].quaternion.multiply(qList[i]);
+      IKJointsList[i].updateMatrixWorld();
+    }
   }
 }
+//---------------------------------------------------------Jacobian IK implementation here ---------------------------------
+
 
 function animate() {
-  solveCCDIK(draggableObjects[0].position);
+  solveJacobian(draggableObjects[0].position);
   requestAnimationFrame(animate);
   renderer.render(scene, camera);
 }
